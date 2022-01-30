@@ -151,7 +151,7 @@ def example_benchmark():
     """Used to get the scalability charts
 
     - dont't overdo the `num_boxes` warning 1: nested loops approach is more than 200 times slower than vectorized approaches
-    - dont't overdo the `num_boxes` warning 2: vectorized approaches have O(n^2) space complexity with respect to `num_boxes
+    - dont't overdo the `num_boxes` warning 2: vectorized approaches have higher memory requirements
     """
 
     # 16 GB of RAM on my system is more than enough to process 14000 x 14000 bounding boxes
