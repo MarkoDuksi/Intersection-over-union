@@ -44,7 +44,7 @@ sqrt(num_boxes);time/s
 
  A nested loops algorithm was implemented as a baseline for comparison to two vectorized solutions. Initial benchmarks (like the one in the above example) were done on a single core of Intel® Core™ i7-3770K CPU @ 3.50GHz with 16 GB RAM. Operating system was Debian 11 and no particular system optimizations were made.
 
- All algorithms exhibited _O_(_n_ x _m_) time complexity as expected. Nested loops algorithm needs the least amount of memory but is extremely slow. Vectorized algorithms need more memory but are more than 200 times faster. Both vectorized solutions exhibit an upward bend in the slope at a point where a constant overhead is introduced as the system starts running low on memory. On this particular system the runtimes of vectorized solutions scale linearly up to about _n_ x _m_ = 1.5e8 before the overhead somewhat steepens the slope. See the charts to better understand this observation.
+ All algorithms exhibited _O_(_n_ x _m_) time complexity as expected. Nested loops algorithm needs the least amount of memory but is extremely slow. Vectorized algorithms need more memory but are more than 200 times faster. Both vectorized solutions exhibit an upward bend in the slope at a point where an overhead is introduced as the system starts running low on memory. On this particular system the runtimes of vectorized solutions scale linearly up to about _n_ x _m_ = 1.5e8 before the overhead somewhat steepens the slope. See the charts to better understand this observation.
 
 
 ![IoU until no more RAM available](https://github.com/MarkoDuksi/Intersection-over-union/blob/main/images/Chart_1.png)
