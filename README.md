@@ -8,7 +8,7 @@ The inspiration for this mini-project was roughly drawn from an assignment speci
 
 ## Usage
 
-You can import or copy/paste the functions from `iou.py` and used them in your project or tweak the file and run it to do some benchmarks. Here is just an example:
+You can import or copy/paste functions from [iou.py](https://github.com/MarkoDuksi/Intersection-over-union/blob/main/iou.py) and use them in your project or tweak the code and run it to do some benchmarks. Here is just an example:
 
 ```
 >>>  python iou.py
@@ -44,18 +44,16 @@ sqrt(num_boxes);time/s
 
  A nested loops algorithm was implemented as a baseline for comparison to two vectorized solutions. Initial benchmarks (like the one in the above example) were done on a single core of Intel® Core™ i7-3770K CPU @ 3.50GHz with 16 GB RAM. Operating system was Debian 11 and no particular system optimizations were made.
 
- All algorithms exhibited _O_(_n_ x _m_) time complexity as expected. Nested loops algorithm is constant space complexity but very slow. Vectorized algorithms need _O_(_n_ x _m_) memory but are more than 200 times faster. Both vectorized solutions exhibit an upward bend in the slope at a point where a constant overhead is introduced as the system starts running low on memory. Interestingly, both vectorized solutions were equally agnostic to output sparsity. On this particular system the runtimes of vectorized solutions scale linearly up to about _n_ x _m_ = 2e8 before the overhead somewhat steepens the slope. See the charts to better understand this observation.
+ All algorithms exhibited _O_(_n_ x _m_) time complexity as expected. Nested loops algorithm needs the least amount of memory but is extremely slow. Vectorized algorithms need more memory but are more than 200 times faster. Both vectorized solutions exhibit an upward bend in the slope at a point where a constant overhead is introduced as the system starts running low on memory. On this particular system the runtimes of vectorized solutions scale linearly up to about _n_ x _m_ = 1.5e8 before the overhead somewhat steepens the slope. See the charts to better understand this observation.
 
 
 ![IoU until no more RAM available](https://github.com/MarkoDuksi/Intersection-over-union/blob/main/images/Chart_1.png)
-
 **Chart 1.** IoU until no more RAM available
 
 ![IoU before the system overhead](https://github.com/MarkoDuksi/Intersection-over-union/blob/main/images/Chart_2.png)
-
 **Chart 2.** IoU before the system overhead
 
-The final benchmark was done using Google Colab and _n_ x _m_ = 2000 x 2000 (for dense and sparse case) to check if the solutions meet the sub-1-second Google Colab runtime goal. Runtimes below 0.5 seconds are demonstrated in the [notebook](https://github.com/MarkoDuksi/Intersection-over-union/blob/main/notebooks/IoU.ipynb) along with some additional exploration.
+ Interestingly, both vectorized solutions were equally agnostic to output sparsity. The final benchmark was done using Google Colab and _n_ x _m_ = 2000 x 2000 (for both dense and sparse case) to check if the solutions meet the sub-1-second Google Colab runtime goal. Runtimes below 0.5 seconds are demonstrated in the [notebook](https://github.com/MarkoDuksi/Intersection-over-union/blob/main/notebooks/IoU.ipynb) along with some additional exploration.
 
 ## Improvements proposal
 
