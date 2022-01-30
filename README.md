@@ -47,13 +47,15 @@ sqrt(num_boxes);time/s
  All algorithms exhibited _O_(_n_ x _m_) time complexity as expected. Nested loops algorithm is constant space complexity but very slow. Vectorized algorithms need _O_(_n_ x _m_) memory but are more than 200 times faster. Both vectorized solutions exhibit an upward bend in the slope at a point where a constant overhead is introduced as the system starts running low on memory. Interestingly, both vectorized solutions were equally agnostic to output sparsity. On this particular system the runtimes of vectorized solutions scale linearly up to about _n_ x _m_ = 2e8 before the overhead somewhat steepens the slope. See the charts to better understand this observation.
 
 
-![IoU until no more RAM available](https://github.com/MarkoDuksi/Itersection-over-union/blob/main/images/Chart_1.png)
+![IoU until no more RAM available](https://github.com/MarkoDuksi/Intersection-over-union/blob/main/images/Chart_1.png)
+
 **Chart 1.** IoU until no more RAM available
 
-![IoU before the system overhead](https://github.com/MarkoDuksi/Itersection-over-union/blob/main/images/Chart_2.png)
+![IoU before the system overhead](https://github.com/MarkoDuksi/Intersection-over-union/blob/main/images/Chart_2.png)
+
 **Chart 2.** IoU before the system overhead
 
-The final benchmark was done using Google Colab and _n_ x _m_ = 2000 x 2000 (for dense and sparse case) to check if the solutions meet the sub-1-second Google Colab runtime goal. Runtimes below 0.5 seconds are demonstrated in the [notebook](https://github.com/MarkoDuksi/Itersection-over-union/blob/main/notebooks/IoU.ipynb) along with some additional exploration.
+The final benchmark was done using Google Colab and _n_ x _m_ = 2000 x 2000 (for dense and sparse case) to check if the solutions meet the sub-1-second Google Colab runtime goal. Runtimes below 0.5 seconds are demonstrated in the [notebook](https://github.com/MarkoDuksi/Intersection-over-union/blob/main/notebooks/IoU.ipynb) along with some additional exploration.
 
 ## Improvements proposal
 
