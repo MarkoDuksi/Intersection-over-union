@@ -1,0 +1,3 @@
+__pycache__
+*.nogit
+.ipynb_checkpoints
