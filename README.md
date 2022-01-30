@@ -48,9 +48,11 @@ sqrt(num_boxes);time/s
 
 
 ![IoU until no more RAM available](https://github.com/MarkoDuksi/Intersection-over-union/blob/main/images/Chart_1.png)
+
 **Chart 1.** IoU until no more RAM available
 
 ![IoU before the system overhead](https://github.com/MarkoDuksi/Intersection-over-union/blob/main/images/Chart_2.png)
+
 **Chart 2.** IoU before the system overhead
 
  Interestingly, both vectorized solutions were equally agnostic to output sparsity. The final benchmark was done using Google Colab and _n_ x _m_ = 2000 x 2000 (for both dense and sparse case) to check if the solutions meet the sub-1-second Google Colab runtime goal. Runtimes below 0.5 seconds are demonstrated in the [notebook](https://github.com/MarkoDuksi/Intersection-over-union/blob/main/notebooks/IoU.ipynb) along with some additional exploration.
