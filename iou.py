@@ -4,13 +4,13 @@
 import time
 import numpy as np
 
-IMG_WIDTH = 9000
-IMG_HEIGHT = 9000
+IMG_WIDTH = 2000
+IMG_HEIGHT = 2000
 
-MIN_BOX_WIDTH = 50
-MIN_BOX_HEIGHT = 50
-MAX_BOX_WIDTH = 80
-MAX_BOX_HEIGHT = 80
+MIN_BOX_WIDTH = 500
+MIN_BOX_HEIGHT = 500
+MAX_BOX_WIDTH = 800
+MAX_BOX_HEIGHT = 800
 
 
 # quick and dirty random bounding boxes
@@ -66,15 +66,16 @@ def get_iou_matrix1(boxes_1, boxes_2):
     n = boxes_1.shape[0]
     m = boxes_2.shape[0]
 
-    boxes_1_x1, boxes_1_y1 = boxes_1[:, 0].reshape(-1, 1), boxes_1[:, 1].reshape(-1, 1)
-    boxes_1_x2, boxes_1_y2 = boxes_1[:, 2].reshape(-1, 1), boxes_1[:, 3].reshape(-1, 1)
-    boxes_2_x1, boxes_2_y1 = boxes_2[:, 0].reshape(-1, 1), boxes_2[:, 1].reshape(-1, 1)
-    boxes_2_x2, boxes_2_y2 = boxes_2[:, 2].reshape(-1, 1), boxes_2[:, 3].reshape(-1, 1)
+    boxes_1_x1, boxes_1_y1 = boxes_1[:, 0:1], boxes_1[:, 1:2]
+    boxes_1_x2, boxes_1_y2 = boxes_1[:, 2:3], boxes_1[:, 3:4]
+    boxes_2_x1, boxes_2_y1 = boxes_2[:, 0:1], boxes_2[:, 1:2]
+    boxes_2_x2, boxes_2_y2 = boxes_2[:, 2:3], boxes_2[:, 3:4]
 
     boxes_1_delta_x = (boxes_1_x2 - boxes_1_x1)
     boxes_1_delta_y = (boxes_1_y2 - boxes_1_y1)
     boxes_2_delta_x = (boxes_2_x2 - boxes_2_x1)
     boxes_2_delta_y = (boxes_2_y2 - boxes_2_y1)
+
     boxes_1_area = boxes_1_delta_x * boxes_1_delta_y
     boxes_2_area = boxes_2_delta_x * boxes_2_delta_y
 
@@ -142,12 +143,194 @@ def get_iou_matrix2(boxes_1, boxes_2):
     boxes_combined_area_matrix = np.ma.array(np.repeat(boxes_1_area, m, axis=1) + np.repeat(boxes_2_area.T, n, axis=0), mask=xy_overlap_mask)
 
     union_area_matrix = boxes_combined_area_matrix - intersection_area_matrix
+
     iou_matrix = intersection_area_matrix / union_area_matrix
 
     return iou_matrix
 
 
-def example_benchmark():
+# vectorized IoU with intermediate timers
+def get_iou_matrix1_timed(boxes_1, boxes_2):
+    n = boxes_1.shape[0]
+    m = boxes_2.shape[0]
+
+    # step 1
+    start = time.perf_counter()
+    boxes_1_x1, boxes_1_y1 = boxes_1[:, 0:1], boxes_1[:, 1:2]
+    boxes_1_x2, boxes_1_y2 = boxes_1[:, 2:3], boxes_1[:, 3:4]
+    boxes_2_x1, boxes_2_y1 = boxes_2[:, 0:1], boxes_2[:, 1:2]
+    boxes_2_x2, boxes_2_y2 = boxes_2[:, 2:3], boxes_2[:, 3:4]
+    print(f'step 1: {time.perf_counter() - start:.4f}')
+
+    # step 2
+    start = time.perf_counter()
+    boxes_1_delta_x = (boxes_1_x2 - boxes_1_x1)
+    boxes_1_delta_y = (boxes_1_y2 - boxes_1_y1)
+    boxes_2_delta_x = (boxes_2_x2 - boxes_2_x1)
+    boxes_2_delta_y = (boxes_2_y2 - boxes_2_y1)
+    print(f'step 2: {time.perf_counter() - start:.4f}')
+
+    # step 3
+    start = time.perf_counter()
+    boxes_1_area = boxes_1_delta_x * boxes_1_delta_y
+    boxes_2_area = boxes_2_delta_x * boxes_2_delta_y
+    print(f'step 3: {time.perf_counter() - start:.4f}')
+
+    # step 4
+    start = time.perf_counter()
+    x_overlap_matrix = np.zeros((4, n, m))
+    x_overlap_matrix[0] = np.repeat(boxes_1_delta_x, m, axis=1)
+    x_overlap_matrix[1] = np.repeat(boxes_2_delta_x.T, n, axis=0)
+    x_overlap_matrix[2] = np.repeat(boxes_1_x2, m, axis=1) - np.repeat(boxes_2_x1.T, n, axis=0)
+    x_overlap_matrix[3] = np.repeat(boxes_2_x2.T, n, axis=0) - np.repeat(boxes_1_x1, m, axis=1)
+    x_overlap_matrix = np.clip(np.min(x_overlap_matrix, axis=0), 0, None)
+    print(f'step 4: {time.perf_counter() - start:.4f}')
+
+    # step 5
+    start = time.perf_counter()
+    y_overlap_matrix = np.zeros((4, n, m))
+    y_overlap_matrix[0] = np.repeat(boxes_1_delta_y, m, axis=1)
+    y_overlap_matrix[1] = np.repeat(boxes_2_delta_y.T, n, axis=0)
+    y_overlap_matrix[2] = np.repeat(boxes_1_y2, m, axis=1) - np.repeat(boxes_2_y1.T, n, axis=0)
+    y_overlap_matrix[3] = np.repeat(boxes_2_y2.T, n, axis=0) - np.repeat(boxes_1_y1, m, axis=1)
+    y_overlap_matrix = np.clip(np.min(y_overlap_matrix, axis=0), 0, None)
+    print(f'step 5: {time.perf_counter() - start:.4f}')
+
+    # step 6
+    start = time.perf_counter()
+    intersection_area_matrix = x_overlap_matrix * y_overlap_matrix
+    boxes_combined_area_matrix = np.repeat(boxes_1_area, m, axis=1) + np.repeat(boxes_2_area.T, n, axis=0)
+    print(f'step 6: {time.perf_counter() - start:.4f}')
+
+    # step 7
+    start = time.perf_counter()
+    union_area_matrix = boxes_combined_area_matrix - intersection_area_matrix
+    print(f'step 7: {time.perf_counter() - start:.4f}')
+
+    # step 8
+    start = time.perf_counter()
+    iou_matrix = intersection_area_matrix / union_area_matrix
+    print(f'step 8: {time.perf_counter() - start:.4f}')
+
+    return iou_matrix
+
+
+# vectorized IoU with intermediate timers, optimized
+def get_iou_matrix1_opt1_timed(boxes_1, boxes_2):
+    n = boxes_1.shape[0]
+    m = boxes_2.shape[0]
+
+    # step 1
+    start = time.perf_counter()
+    boxes_1_x1, boxes_1_y1 = boxes_1[:, 0].reshape(1, -1), boxes_1[:, 1].reshape(1, -1)
+    boxes_1_x2, boxes_1_y2 = boxes_1[:, 2].reshape(1, -1), boxes_1[:, 3].reshape(1, -1)
+    boxes_2_x1, boxes_2_y1 = boxes_2[:, 0].reshape(1, -1), boxes_2[:, 1].reshape(1, -1)
+    boxes_2_x2, boxes_2_y2 = boxes_2[:, 2].reshape(1, -1), boxes_2[:, 3].reshape(1, -1)
+    print(f'step 1: {time.perf_counter() - start:.4f}')
+
+    # step 2
+    start = time.perf_counter()
+    boxes_1_delta_x = (boxes_1_x2 - boxes_1_x1)
+    boxes_1_delta_y = (boxes_1_y2 - boxes_1_y1)
+    boxes_2_delta_x = (boxes_2_x2 - boxes_2_x1)
+    boxes_2_delta_y = (boxes_2_y2 - boxes_2_y1)
+    print(f'step 2: {time.perf_counter() - start:.4f}')
+
+    # step 3
+    start = time.perf_counter()
+    boxes_1_area = boxes_1_delta_x * boxes_1_delta_y
+    boxes_2_area = boxes_2_delta_x * boxes_2_delta_y
+    print(f'step 3: {time.perf_counter() - start:.4f}')
+
+    # step 4
+    start = time.perf_counter()
+    x_overlap_matrix = np.zeros((4, n, m))
+    x_overlap_matrix[0] = np.repeat(boxes_1_delta_x, m, axis=0).T
+    x_overlap_matrix[1] = np.repeat(boxes_2_delta_x, n, axis=0)
+    x_overlap_matrix[2] = np.repeat(boxes_1_x2, m, axis=0).T - np.repeat(boxes_2_x1, n, axis=0)
+    x_overlap_matrix[3] = np.repeat(boxes_2_x2, n, axis=0) - np.repeat(boxes_1_x1, m, axis=0).T
+    x_overlap_matrix = np.clip(np.min(x_overlap_matrix, axis=0), 0, None)
+    print(f'step 4: {time.perf_counter() - start:.4f}')
+
+    # step 5
+    start = time.perf_counter()
+    y_overlap_matrix = np.zeros((4, n, m))
+    y_overlap_matrix[0] = np.repeat(boxes_1_delta_y, m, axis=0).T
+    y_overlap_matrix[1] = np.repeat(boxes_2_delta_y, n, axis=0)
+    y_overlap_matrix[2] = np.repeat(boxes_1_y2, m, axis=0).T - np.repeat(boxes_2_y1, n, axis=0)
+    y_overlap_matrix[3] = np.repeat(boxes_2_y2, n, axis=0) - np.repeat(boxes_1_y1, m, axis=0).T
+    y_overlap_matrix = np.clip(np.min(y_overlap_matrix, axis=0), 0, None)
+    print(f'step 5: {time.perf_counter() - start:.4f}')
+
+    # step 6
+    start = time.perf_counter()
+    intersection_area_matrix = x_overlap_matrix * y_overlap_matrix
+    boxes_combined_area_matrix = np.repeat(boxes_1_area, m, axis=0).T + np.repeat(boxes_2_area, n, axis=0)
+    print(f'step 6: {time.perf_counter() - start:.4f}')
+
+    # step 7
+    start = time.perf_counter()
+    union_area_matrix = boxes_combined_area_matrix - intersection_area_matrix
+    print(f'step 7: {time.perf_counter() - start:.4f}')
+
+    # step 8
+    start = time.perf_counter()
+    iou_matrix = intersection_area_matrix / union_area_matrix
+    print(f'step 8: {time.perf_counter() - start:.4f}')
+
+    return iou_matrix
+
+
+def get_iou_matrix1_opt1(boxes_1, boxes_2):
+    n = boxes_1.shape[0]
+    m = boxes_2.shape[0]
+
+    # step 1
+    boxes_1_x1, boxes_1_y1 = boxes_1[:, 0].reshape(1, -1), boxes_1[:, 1].reshape(1, -1)
+    boxes_1_x2, boxes_1_y2 = boxes_1[:, 2].reshape(1, -1), boxes_1[:, 3].reshape(1, -1)
+    boxes_2_x1, boxes_2_y1 = boxes_2[:, 0].reshape(1, -1), boxes_2[:, 1].reshape(1, -1)
+    boxes_2_x2, boxes_2_y2 = boxes_2[:, 2].reshape(1, -1), boxes_2[:, 3].reshape(1, -1)
+
+    # step 2
+    boxes_1_delta_x = (boxes_1_x2 - boxes_1_x1)
+    boxes_1_delta_y = (boxes_1_y2 - boxes_1_y1)
+    boxes_2_delta_x = (boxes_2_x2 - boxes_2_x1)
+    boxes_2_delta_y = (boxes_2_y2 - boxes_2_y1)
+
+    # step 3
+    boxes_1_area = boxes_1_delta_x * boxes_1_delta_y
+    boxes_2_area = boxes_2_delta_x * boxes_2_delta_y
+
+    # step 4
+    x_overlap_matrix = np.zeros((4, n, m))
+    x_overlap_matrix[0] = np.repeat(boxes_1_delta_x, m, axis=0).T
+    x_overlap_matrix[1] = np.repeat(boxes_2_delta_x, n, axis=0)
+    x_overlap_matrix[2] = np.repeat(boxes_1_x2, m, axis=0).T - np.repeat(boxes_2_x1, n, axis=0)
+    x_overlap_matrix[3] = np.repeat(boxes_2_x2, n, axis=0) - np.repeat(boxes_1_x1, m, axis=0).T
+    x_overlap_matrix = np.clip(np.min(x_overlap_matrix, axis=0), 0, None)
+
+    # step 5
+    y_overlap_matrix = np.zeros((4, n, m))
+    y_overlap_matrix[0] = np.repeat(boxes_1_delta_y, m, axis=0).T
+    y_overlap_matrix[1] = np.repeat(boxes_2_delta_y, n, axis=0)
+    y_overlap_matrix[2] = np.repeat(boxes_1_y2, m, axis=0).T - np.repeat(boxes_2_y1, n, axis=0)
+    y_overlap_matrix[3] = np.repeat(boxes_2_y2, n, axis=0) - np.repeat(boxes_1_y1, m, axis=0).T
+    y_overlap_matrix = np.clip(np.min(y_overlap_matrix, axis=0), 0, None)
+
+    # step 6
+    intersection_area_matrix = x_overlap_matrix * y_overlap_matrix
+    boxes_combined_area_matrix = np.repeat(boxes_1_area, m, axis=0).T + np.repeat(boxes_2_area, n, axis=0)
+
+    # step 7
+    union_area_matrix = boxes_combined_area_matrix - intersection_area_matrix
+
+    # step 8
+    iou_matrix = intersection_area_matrix / union_area_matrix
+
+    return iou_matrix
+
+
+def example_benchmark1():
     """Used to get the scalability charts
 
     - dont't overdo the `num_boxes` warning 1: nested loops approach is more than 200 times slower than vectorized approaches
@@ -180,5 +363,28 @@ def example_benchmark():
         # print(f'{time.perf_counter() - start:.4f}')
 
 
+def get_timings():
+    """Used to examine the time needed for various substeps within a function call
+    """
+    num_boxes_1 = 2000
+    num_boxes_2 = 2000
+    boxes_1 = get_boxes(num_boxes_1, IMG_WIDTH, IMG_HEIGHT, MIN_BOX_WIDTH, MIN_BOX_HEIGHT, MAX_BOX_WIDTH, MAX_BOX_HEIGHT, seed=0)
+    boxes_2 = get_boxes(num_boxes_2, IMG_WIDTH, IMG_HEIGHT, MIN_BOX_WIDTH, MIN_BOX_HEIGHT, MAX_BOX_WIDTH, MAX_BOX_HEIGHT, seed=1)
+
+    # vectorized IoU with intermediate timers
+    start_total = time.perf_counter()
+    iou_matrix1 = get_iou_matrix1(boxes_1, boxes_2)
+    print(f'get_iou_matrix1 (vectorized solution) for 2k x 2k boxes: {time.perf_counter() - start_total:.4f} s')
+
+    # vectorized IoU with intermediate timers, optimization attempt 1
+    start_total = time.perf_counter()
+    iou_matrix1_opt1 = get_iou_matrix1_opt1(boxes_1, boxes_2)
+    print(f'get_iou_matrix1_opt1 (vectorized/optimized solution) for 2k x 2k boxes: {time.perf_counter() - start_total:.4f} s')
+
+    print(f'{np.allclose(iou_matrix1, iou_matrix1_opt1) = }')
+    print(f'sparsity = {np.sum((iou_matrix1 == 0))/iou_matrix1.size:.2%}')
+
+
 if __name__ == '__main__':
-    example_benchmark()
+    # example_benchmark1()
+    get_timings()
