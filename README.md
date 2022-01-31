@@ -70,7 +70,9 @@ np.allclose(iou_matrix1, iou_matrix1_opt1) = True
 sparsity = 38.60%
 ```
 
-More benchmarking was done for various sizes of _n_ and _m_: equal up to 10k each, unequal with _n_ = 10 * _m_ as well as _m_ = 10 * _n_. The relative speedup was indifferent to the relative sizes of _n_ and _m_. However the relative speedup was greater for smaller total number of boxes _n_ x _m_ than it was for massive ones. Current best performer function in the module is `get_iou_matrix1_opt1` (there are other independent ones to play around with). Benchmarking was not repeated in Google Colab since it's not exactly a breakthrough improvement over the previous best.
+More benchmarking was done for various sizes of _n_ and _m_: equal up to 10k each, unequal with _n_ = 10 * _m_ as well as _m_ = 10 * _n_. The relative speedup was indifferent to the relative sizes of _n_ and _m_. However the relative speedup was greater for smaller total number of boxes _n_ x _m_ than it was for massive ones.
+
+Current best performer function in the module is `get_iou_matrix1_opt1` (there are other independent ones to play around with). Benchmarking was not repeated in Google Colab since it's not exactly a breakthrough improvement over the previous best.
 
 This demonstrates that even some things rightfully assumed to have already been internally optimized in numpy can easily be optimized further. Sadly, hack optimizations do not generally result in the most readable code.
 
