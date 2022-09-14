@@ -1,28 +1,40 @@
 import numpy as np
 
 
-# quick and dirty random bounding boxes
-def boxes(num_boxes, img_width, img_height, min_box_width, min_box_height, max_box_width, max_box_height, seed=0):
-    rng = np.random.default_rng(seed)
-    max_half_box_width = max_box_width / 2
-    max_half_box_height = max_box_height / 2
+def boxes(n,                      # number of boxes to generate
+          img_w, img_h,           # width and height to fit the boxes into
+          min_box_w, max_box_w,   # limits to boxes widths
+          min_box_h, max_box_h,   # limits to boxes heights
+          rng):                   # numpy.random.Generator object to be used
+    """Random boxes generator.
 
-    centers_x = rng.random(size=num_boxes, dtype=np.float32) * (img_width - max_box_width) + max_half_box_width
-    centers_y = rng.random(size=num_boxes, dtype=np.float32) * (img_height - max_box_height) + max_half_box_height
-    widths = rng.random(size=num_boxes, dtype=np.float32) * (max_box_width - min_box_width) + min_box_width
-    heights = rng.random(size=num_boxes, dtype=np.float32) * (max_box_height - min_box_height) + min_box_height
+    Returns a float32 numpy array (F-contiguous) representing bounding boxes
+    according to the following specifications:
 
-    corners_x1 = centers_x - (widths / 2)
-    corners_y1 = centers_y - (heights / 2)
-    corners_x2 = img_width - widths
-    corners_y2 = img_height - heights
+    '[...] of shape `(n, 4)` where `n` stands for the number of boxes in the
+    given array, and `4` stands for `(x1, y1, x2, y2)`. `(x1, y1)` forms the
+    topmost corner of the box and `(x2, y2)` forms the bottommost corner.`
 
-    corners_x1 = centers_x - (widths / 2)
-    corners_y1 = centers_y - (heights / 2)
-    corners_x2 = centers_x + (widths / 2)
-    corners_y2 = centers_y + (heights / 2)
+    `[...] assume well defined boxes (`y1 < y2` and `x1 < X2`).`
 
-    return np.round(np.array(list(zip(corners_x1, corners_y1, corners_x2, corners_y2))))
+    The boxes widths and heights are generated uniformly at random from the
+    ranges [`min_box_w`, `max_box_w`] and [`min_box_h`, `max_box_h`
+    respectively. The origin of each box is generated uniformly at random with
+    domain restricted to the subspace of `img_w × img_h` valid for the given
+    box width and height.
+    """
+
+    widths = rng.integers(min_box_w, max_box_w, size=n, endpoint=True)
+    heights = rng.integers(min_box_h, max_box_h, size=n, endpoint=True)
+
+    corners_x1 = rng.random(size=n) * (img_w - 1 - widths)
+    corners_y1 = rng.random(size=n) * (img_h - 1 - heights)
+
+    corners_x2 = corners_x1 + widths
+    corners_y2 = corners_y1 + heights
+
+    return np.round((corners_x1, corners_y1, corners_x2, corners_y2))\
+        .T.astype(np.float32)
 
 
 # single pair of boxes IoU
