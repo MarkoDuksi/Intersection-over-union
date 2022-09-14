@@ -49,6 +49,16 @@ def get_iou(box1, box2):
     return iou
 
 
+# reference version IoU matrix (nested loops)
+def get_iou_matrix_ref(boxes_1, boxes_2):
+    iou_matrix = np.empty((boxes_1.shape[0], boxes_2.shape[0]), dtype=np.float32)
+
+    for n, box1 in enumerate(boxes_1):
+        for m, box2 in enumerate(boxes_2):
+            iou_matrix[n, m] = get_iou(box1, box2)
+    return iou_matrix
+
+
 # vectorized IoU
 def get_iou_matrix1(boxes_1, boxes_2):
     n = boxes_1.shape[0]
