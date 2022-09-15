@@ -91,6 +91,24 @@ def iou_matrix_looped_ref(boxes_1, boxes_2):
     return iou_matrix
 
 
+# make input arrays of shapes (n, 4) and (m, 4) broadcastable to (n, m, 4)
+def reshape_input(func):
+    def wrapper(arr1, arr2):
+        result = func(
+            arr1.reshape(-1, 1, 4),
+            arr2.reshape(1, -1, 4),
+        )
+        return result
+    return wrapper
+
+
+# numpy-vectorized reference IoU matrix
+iou_matrix_np_vect_ref = reshape_input(
+    np.vectorize(iou, signature='(n),(n)->()'),
+)
+iou_matrix_np_vect_ref.__name__ = 'iou_matrix_np_vect_ref'
+
+
 # manually vectorized IoU matrix using numpy (ver1)
 def iou_matrix_np_opt1(boxes_1, boxes_2):
     n = boxes_1.shape[0]
