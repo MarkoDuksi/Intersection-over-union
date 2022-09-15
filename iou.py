@@ -109,15 +109,19 @@ iou_matrix_np_vect_ref = reshape_input(
 iou_matrix_np_vect_ref.__name__ = 'iou_matrix_np_vect_ref'
 
 
-# manually vectorized IoU matrix using numpy (ver1)
-def iou_matrix_np_opt1(boxes_1, boxes_2):
-    n = boxes_1.shape[0]
-    m = boxes_2.shape[0]
+# manually vectorized IoU matrix using numpy only
+def iou_matrix_np_opt(boxes_1, boxes_2):
+    X1, Y1, X2, Y2 = 0, 1, 2, 3
 
-    boxes_1_x1, boxes_1_y1 = boxes_1[:, 0:1], boxes_1[:, 1:2]
-    boxes_1_x2, boxes_1_y2 = boxes_1[:, 2:3], boxes_1[:, 3:4]
-    boxes_2_x1, boxes_2_y1 = boxes_2[:, 0:1], boxes_2[:, 1:2]
-    boxes_2_x2, boxes_2_y2 = boxes_2[:, 2:3], boxes_2[:, 3:4]
+    boxes_1_x1 = np.ascontiguousarray(boxes_1[:, X1]).reshape(-1, 1)
+    boxes_1_y1 = np.ascontiguousarray(boxes_1[:, Y1]).reshape(-1, 1)
+    boxes_1_x2 = np.ascontiguousarray(boxes_1[:, X2]).reshape(-1, 1)
+    boxes_1_y2 = np.ascontiguousarray(boxes_1[:, Y2]).reshape(-1, 1)
+
+    boxes_2_x1 = np.ascontiguousarray(boxes_2[:, X1]).reshape(-1, 1)
+    boxes_2_y1 = np.ascontiguousarray(boxes_2[:, Y1]).reshape(-1, 1)
+    boxes_2_x2 = np.ascontiguousarray(boxes_2[:, X2]).reshape(-1, 1)
+    boxes_2_y2 = np.ascontiguousarray(boxes_2[:, Y2]).reshape(-1, 1)
 
     boxes_1_delta_x = (boxes_1_x2 - boxes_1_x1)
     boxes_1_delta_y = (boxes_1_y2 - boxes_1_y1)
@@ -127,121 +131,43 @@ def iou_matrix_np_opt1(boxes_1, boxes_2):
     boxes_1_area = boxes_1_delta_x * boxes_1_delta_y
     boxes_2_area = boxes_2_delta_x * boxes_2_delta_y
 
-    x_overlap_matrix = np.zeros((4, n, m))
-    x_overlap_matrix[0] = np.repeat(boxes_1_delta_x, m, axis=1)
-    x_overlap_matrix[1] = np.repeat(boxes_2_delta_x.T, n, axis=0)
-    x_overlap_matrix[2] = np.repeat(boxes_1_x2, m, axis=1) - np.repeat(boxes_2_x1.T, n, axis=0)
-    x_overlap_matrix[3] = np.repeat(boxes_2_x2.T, n, axis=0) - np.repeat(boxes_1_x1, m, axis=1)
-    x_overlap_matrix = np.clip(np.min(x_overlap_matrix, axis=0), 0, None)
+    min_within_delta_x = np.minimum(
+        boxes_1_delta_x,
+        boxes_2_delta_x.T,
+    )
+    min_across_delta_x = np.minimum(
+        boxes_1_x2 - boxes_2_x1.T,
+        boxes_2_x2.T - boxes_1_x1,
+    )
+    x_overlap = np.clip(
+        np.minimum(
+            min_within_delta_x,
+            min_across_delta_x,
+        ),
+        0,
+        None,
+    )
+    min_within_delta_y = np.minimum(
+        boxes_1_delta_y,
+        boxes_2_delta_y.T,
+    )
+    min_across_delta_y = np.minimum(
+        boxes_1_y2 - boxes_2_y1.T,
+        boxes_2_y2.T - boxes_1_y1,
+    )
+    y_overlap = np.clip(
+        np.minimum(
+            min_within_delta_y,
+            min_across_delta_y,
+        ),
+        0,
+        None,
+    )
 
-    y_overlap_matrix = np.zeros((4, n, m))
-    y_overlap_matrix[0] = np.repeat(boxes_1_delta_y, m, axis=1)
-    y_overlap_matrix[1] = np.repeat(boxes_2_delta_y.T, n, axis=0)
-    y_overlap_matrix[2] = np.repeat(boxes_1_y2, m, axis=1) - np.repeat(boxes_2_y1.T, n, axis=0)
-    y_overlap_matrix[3] = np.repeat(boxes_2_y2.T, n, axis=0) - np.repeat(boxes_1_y1, m, axis=1)
-    y_overlap_matrix = np.clip(np.min(y_overlap_matrix, axis=0), 0, None)
+    intersection_area = x_overlap * y_overlap
+    boxes_combined_area = boxes_1_area + boxes_2_area.T
+    union_area = boxes_combined_area - intersection_area
 
-    intersection_area_matrix = x_overlap_matrix * y_overlap_matrix
-    boxes_combined_area_matrix = np.repeat(boxes_1_area, m, axis=1) + np.repeat(boxes_2_area.T, n, axis=0)
-
-    union_area_matrix = boxes_combined_area_matrix - intersection_area_matrix
-    iou_matrix = intersection_area_matrix / union_area_matrix
-
-    return iou_matrix
-
-
-# manually vectorized IoU matrix using numpy (ver2)
-def iou_matrix_np_opt2(boxes_1, boxes_2):
-    n = boxes_1.shape[0]
-    m = boxes_2.shape[0]
-
-    boxes_1_x1, boxes_1_y1 = boxes_1[:, 0].reshape(-1, 1), boxes_1[:, 1].reshape(-1, 1)
-    boxes_1_x2, boxes_1_y2 = boxes_1[:, 2].reshape(-1, 1), boxes_1[:, 3].reshape(-1, 1)
-    boxes_2_x1, boxes_2_y1 = boxes_2[:, 0].reshape(-1, 1), boxes_2[:, 1].reshape(-1, 1)
-    boxes_2_x2, boxes_2_y2 = boxes_2[:, 2].reshape(-1, 1), boxes_2[:, 3].reshape(-1, 1)
-
-    boxes_1_delta_x = (boxes_1_x2 - boxes_1_x1)
-    boxes_1_delta_y = (boxes_1_y2 - boxes_1_y1)
-    boxes_2_delta_x = (boxes_2_x2 - boxes_2_x1)
-    boxes_2_delta_y = (boxes_2_y2 - boxes_2_y1)
-    boxes_1_area = boxes_1_delta_x * boxes_1_delta_y
-    boxes_2_area = boxes_2_delta_x * boxes_2_delta_y
-
-    x_overlap_matrix = np.zeros((4, n, m))
-    x_overlap_matrix[0] = np.repeat(boxes_1_delta_x, m, axis=1)
-    x_overlap_matrix[1] = np.repeat(boxes_2_delta_x.T, n, axis=0)
-    x_overlap_matrix[2] = np.repeat(boxes_1_x2, m, axis=1) - np.repeat(boxes_2_x1.T, n, axis=0)
-    x_overlap_matrix[3] = np.repeat(boxes_2_x2.T, n, axis=0) - np.repeat(boxes_1_x1, m, axis=1)
-    x_overlap_matrix = np.min(x_overlap_matrix, axis=0)
-    x_overlap_mask = (x_overlap_matrix <= 0)
-
-    y_overlap_matrix = np.zeros((4, n, m))
-    y_overlap_matrix[0] = np.repeat(boxes_1_delta_y, m, axis=1)
-    y_overlap_matrix[1] = np.repeat(boxes_2_delta_y.T, n, axis=0)
-    y_overlap_matrix[2] = np.repeat(boxes_1_y2, m, axis=1) - np.repeat(boxes_2_y1.T, n, axis=0)
-    y_overlap_matrix[3] = np.repeat(boxes_2_y2.T, n, axis=0) - np.repeat(boxes_1_y1, m, axis=1)
-    y_overlap_matrix = np.min(y_overlap_matrix, axis=0)
-    y_overlap_mask = (y_overlap_matrix <= 0)
-
-    xy_overlap_mask = x_overlap_mask | y_overlap_mask
-    x_overlap_matrix = np.ma.array(x_overlap_matrix, mask=xy_overlap_mask)
-    y_overlap_matrix = np.ma.array(y_overlap_matrix, mask=xy_overlap_mask)
-
-    intersection_area_matrix = x_overlap_matrix * y_overlap_matrix
-    boxes_combined_area_matrix = np.ma.array(np.repeat(boxes_1_area, m, axis=1) + np.repeat(boxes_2_area.T, n, axis=0), mask=xy_overlap_mask)
-
-    union_area_matrix = boxes_combined_area_matrix - intersection_area_matrix
-
-    iou_matrix = intersection_area_matrix / union_area_matrix
-
-    return iou_matrix
-
-
-# manually vectorized IoU matrix using numpy (ver3)
-def iou_matrix_np_opt3(boxes_1, boxes_2):
-    n = boxes_1.shape[0]
-    m = boxes_2.shape[0]
-
-    # step 1
-    boxes_1_x1, boxes_1_y1 = boxes_1[:, 0].reshape(1, -1), boxes_1[:, 1].reshape(1, -1)
-    boxes_1_x2, boxes_1_y2 = boxes_1[:, 2].reshape(1, -1), boxes_1[:, 3].reshape(1, -1)
-    boxes_2_x1, boxes_2_y1 = boxes_2[:, 0].reshape(1, -1), boxes_2[:, 1].reshape(1, -1)
-    boxes_2_x2, boxes_2_y2 = boxes_2[:, 2].reshape(1, -1), boxes_2[:, 3].reshape(1, -1)
-
-    # step 2
-    boxes_1_delta_x = (boxes_1_x2 - boxes_1_x1)
-    boxes_1_delta_y = (boxes_1_y2 - boxes_1_y1)
-    boxes_2_delta_x = (boxes_2_x2 - boxes_2_x1)
-    boxes_2_delta_y = (boxes_2_y2 - boxes_2_y1)
-
-    # step 3
-    boxes_1_area = boxes_1_delta_x * boxes_1_delta_y
-    boxes_2_area = boxes_2_delta_x * boxes_2_delta_y
-
-    # step 4
-    x_overlap_matrix = np.zeros((4, n, m))
-    x_overlap_matrix[0] = np.repeat(boxes_1_delta_x, m, axis=0).T
-    x_overlap_matrix[1] = np.repeat(boxes_2_delta_x, n, axis=0)
-    x_overlap_matrix[2] = np.repeat(boxes_1_x2, m, axis=0).T - np.repeat(boxes_2_x1, n, axis=0)
-    x_overlap_matrix[3] = np.repeat(boxes_2_x2, n, axis=0) - np.repeat(boxes_1_x1, m, axis=0).T
-    x_overlap_matrix = np.clip(np.min(x_overlap_matrix, axis=0), 0, None)
-
-    # step 5
-    y_overlap_matrix = np.zeros((4, n, m))
-    y_overlap_matrix[0] = np.repeat(boxes_1_delta_y, m, axis=0).T
-    y_overlap_matrix[1] = np.repeat(boxes_2_delta_y, n, axis=0)
-    y_overlap_matrix[2] = np.repeat(boxes_1_y2, m, axis=0).T - np.repeat(boxes_2_y1, n, axis=0)
-    y_overlap_matrix[3] = np.repeat(boxes_2_y2, n, axis=0) - np.repeat(boxes_1_y1, m, axis=0).T
-    y_overlap_matrix = np.clip(np.min(y_overlap_matrix, axis=0), 0, None)
-
-    # step 6
-    intersection_area_matrix = x_overlap_matrix * y_overlap_matrix
-    boxes_combined_area_matrix = np.repeat(boxes_1_area, m, axis=0).T + np.repeat(boxes_2_area, n, axis=0)
-
-    # step 7
-    union_area_matrix = boxes_combined_area_matrix - intersection_area_matrix
-
-    # step 8
-    iou_matrix = intersection_area_matrix / union_area_matrix
+    iou_matrix = intersection_area / union_area
 
     return iou_matrix
