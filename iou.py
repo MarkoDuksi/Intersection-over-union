@@ -2,7 +2,7 @@ import numpy as np
 
 
 # quick and dirty random bounding boxes
-def get_boxes(num_boxes, img_width, img_height, min_box_width, min_box_height, max_box_width, max_box_height, seed=0):
+def boxes(num_boxes, img_width, img_height, min_box_width, min_box_height, max_box_width, max_box_height, seed=0):
     rng = np.random.default_rng(seed)
     max_half_box_width = max_box_width / 2
     max_half_box_height = max_box_height / 2
@@ -25,8 +25,8 @@ def get_boxes(num_boxes, img_width, img_height, min_box_width, min_box_height, m
     return np.round(np.array(list(zip(corners_x1, corners_y1, corners_x2, corners_y2))))
 
 
-# non-vectorized IoU
-def get_iou(box1, box2):
+# single pair of boxes IoU
+def iou(box1, box2):
     box1_x1, box1_y1, box1_x2, box1_y2 = box1
     box2_x1, box2_y1, box2_x2, box2_y2 = box2
 
@@ -65,18 +65,18 @@ def get_iou(box1, box2):
     return iou
 
 
-# reference version IoU matrix (nested loops)
-def get_iou_matrix_ref(boxes_1, boxes_2):
+# nested loops reference version IoU matrix
+def iou_matrix_looped_ref(boxes_1, boxes_2):
     iou_matrix = np.empty((boxes_1.shape[0], boxes_2.shape[0]), dtype=np.float32)
 
     for n, box1 in enumerate(boxes_1):
         for m, box2 in enumerate(boxes_2):
-            iou_matrix[n, m] = get_iou(box1, box2)
+            iou_matrix[n, m] = iou(box1, box2)
     return iou_matrix
 
 
-# vectorized IoU
-def get_iou_matrix1(boxes_1, boxes_2):
+# manually vectorized IoU matrix using numpy (ver1)
+def iou_matrix_np_opt1(boxes_1, boxes_2):
     n = boxes_1.shape[0]
     m = boxes_2.shape[0]
 
@@ -116,8 +116,8 @@ def get_iou_matrix1(boxes_1, boxes_2):
     return iou_matrix
 
 
-# vectorized IoU using masked arrays
-def get_iou_matrix2(boxes_1, boxes_2):
+# manually vectorized IoU matrix using numpy (ver2)
+def iou_matrix_np_opt2(boxes_1, boxes_2):
     n = boxes_1.shape[0]
     m = boxes_2.shape[0]
 
@@ -163,7 +163,8 @@ def get_iou_matrix2(boxes_1, boxes_2):
     return iou_matrix
 
 
-def get_iou_matrix1_opt1(boxes_1, boxes_2):
+# manually vectorized IoU matrix using numpy (ver3)
+def iou_matrix_np_opt3(boxes_1, boxes_2):
     n = boxes_1.shape[0]
     m = boxes_2.shape[0]
 
