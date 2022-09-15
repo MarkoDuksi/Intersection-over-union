@@ -1,4 +1,5 @@
 import numpy as np
+import numba as nb
 
 
 def boxes(n,                      # number of boxes to generate
@@ -171,3 +172,51 @@ def iou_matrix_np_opt(boxes_1, boxes_2):
     iou_matrix = intersection_area / union_area
 
     return iou_matrix
+
+
+# numba-vectorized IoU matrix
+@reshape_input
+@nb.guvectorize(
+    [(nb.float64[:], nb.float64[:], nb.float32[:])],
+    '(n),(n)->()',
+    nopython=True,
+)
+def iou_matrix_nb_vect(box1, box2, iou):
+    box1_x1, box1_y1, box1_x2, box1_y2 = box1
+    box2_x1, box2_y1, box2_x2, box2_y2 = box2
+
+    box1_delta_x = (box1_x2 - box1_x1)
+    box1_delta_y = (box1_y2 - box1_y1)
+    box2_delta_x = (box2_x2 - box2_x1)
+    box2_delta_y = (box2_y2 - box2_y1)
+
+    x_overlap = max(
+        0,
+        min(
+            box1_delta_x,
+            box2_delta_x,
+            box1_x2 - box2_x1,
+            box2_x2 - box1_x1,
+        ),
+    )
+    y_overlap = max(
+        0,
+        min(
+            box1_delta_y,
+            box2_delta_y,
+            box1_y2 - box2_y1,
+            box2_y2 - box1_y1,
+        ),
+    )
+
+    intersection_area = x_overlap * y_overlap
+
+    box1_area = box1_delta_x * box1_delta_y
+    box2_area = box2_delta_x * box2_delta_y
+
+    union_area = box1_area + box2_area - intersection_area
+
+    iou[0] = intersection_area / union_area
+
+
+iou_matrix_nb_vect.__name__ = 'iou_matrix_nb_vect'
