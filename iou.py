@@ -79,11 +79,15 @@ def iou(box1, box2):
 
 # nested loops reference version IoU matrix
 def iou_matrix_looped_ref(boxes_1, boxes_2):
-    iou_matrix = np.empty((boxes_1.shape[0], boxes_2.shape[0]), dtype=np.float32)
+    iou_matrix = np.empty(
+        (boxes_1.shape[0], boxes_2.shape[0]),
+        dtype=np.float32,
+    )
 
     for n, box1 in enumerate(boxes_1):
         for m, box2 in enumerate(boxes_2):
             iou_matrix[n, m] = iou(box1, box2)
+
     return iou_matrix
 
 
