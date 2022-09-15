@@ -10,7 +10,7 @@ def benchmark(func, min_num_boxes, max_num_boxes, step, params, seed=0):
     rng = np.random.default_rng(seed=seed)
 
     print(f'\nbenchmarking `{func.__name__}`:')
-    print('---------------------------------------------------')
+    print('-----------------------------------------------------')
     print(f'number of boxes    overlap fraction    execution time')
     for num_boxes in range(min_num_boxes, max_num_boxes + 1, step):
         num_boxes_string = f'{num_boxes}x{num_boxes}'
@@ -48,11 +48,13 @@ if __name__ == '__main__':
     # benchmark overlapping bounding boxes
     benchmark(iou.iou_matrix_looped_ref, 50, 500, 50, dense_params)
     benchmark(iou.iou_matrix_np_vect_ref, 50, 500, 50, dense_params)
-    # increase box count 100 times (10*10) for the optimized implementation
+    # increase box count 100 times (10*10) for best performers
     benchmark(iou.iou_matrix_np_opt, 500, 5000, 500, dense_params)
+    benchmark(iou.iou_matrix_nb_vect, 500, 5000, 500, dense_params)
 
     # benchmark mostly non-overlapping bounding boxes
     benchmark(iou.iou_matrix_looped_ref, 50, 500, 50, sparse_params)
     benchmark(iou.iou_matrix_np_vect_ref, 50, 500, 50, sparse_params)
-    # increase box count 100 times (10*10) for the optimized implementation
+    # increase box count 100 times (10*10) for best performers
     benchmark(iou.iou_matrix_np_opt, 500, 5000, 500, sparse_params)
+    benchmark(iou.iou_matrix_nb_vect, 500, 5000, 500, sparse_params)
